@@ -67,7 +67,7 @@ async function wrapTokens(account, walletNumber, numTransactions) {
 
     for (let i = 0; i < numTransactions; i++) {
       if(i == numTransactions) {
-        process.exit()
+        await process.exit()
       }
       if (!(await isBalanceSufficient(account, amount, walletNumber))) {
         continue;
@@ -98,7 +98,7 @@ async function wrapTokens(account, walletNumber, numTransactions) {
   }
 }
 
-async function executeMultipleTransactions(autoRestart = true, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
+async function executeMultipleTransactions(initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -107,7 +107,7 @@ async function executeMultipleTransactions(autoRestart = true, initialChoice = n
     await processTransactions(true, rl, initialChoice, initialNumTransactions, initialPolAmount);
 }
 
-async function processTransactions(autoRestart, rl, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
+async function processTransactions( rl, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
   let numTransactions = initialNumTransactions;
   let polAmount = initialPolAmount;
 
@@ -133,18 +133,6 @@ async function processTransactions(autoRestart, rl, initialChoice = null, initia
     console.log(`\x1b[36m[${walletNumber}]\x1b[0m Processing transactions for account: \x1b[32m${account.address}\x1b[0m`);
         await wrapTokens(account, walletNumber, numTransactions);
   }
-
-    const delay = config.autoRestartDelay;
-    console.log(`Auto-restarting in ${delay} seconds...`);
-    let countdown = delay;
-    const countdownInterval = setInterval(() => {
-      countdown -= 1;
-      process.stdout.write(`\rAuto-restarting in ${countdown} seconds...`);
-      if (countdown <= 0) {
-        clearInterval(countdownInterval);
-        executeMultipleTransactions(true, null, numTransactions, polAmount);
-      }
-    }, 1000);
 }
 
 executeMultipleTransactions();
