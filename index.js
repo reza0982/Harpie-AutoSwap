@@ -98,61 +98,6 @@ async function wrapTokens(account, walletNumber, numTransactions) {
   }
 }
 
-async function unwrapTokens(account, walletNumber) {
-  try {
-    const balance = await contract.methods.balanceOf(account.address).call();
-    if (balance === '0') {
-      console.log(`\x1b[36m[${walletNumber}]\x1b[0m No tPOL balance to unwrap. Skipping account.`);
-      return;
-    }
-
-    if (!(await isBalanceSufficient(account, balance, walletNumber))) {
-      return;
-    }
-
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Preparing to unwrap tokens and sending transaction...`);
-    const data = contract.methods.unwrap(balance, account.address).encodeABI();
-    const tx = {
-      from: account.address,
-      to: contractAddress,
-      gas: 2000000,
-      data: data
-    };
-
-    const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Transaction successful with hash: \x1b[33m${receipt.transactionHash}\x1b[0m`);
-  } catch (error) {
-    console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error executing transaction:`, error);
-  }
-}
-
-async function convertPOLToWPOL(account, walletNumber, polAmount) {
-  try {
-    const weiAmount = web3.utils.toWei(polAmount.toString(), 'ether');
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Converting ${polAmount} POL to WPOL...`);
-
-    if (!(await isBalanceSufficient(account, weiAmount, walletNumber))) {
-      return;
-    }
-
-    const data = wpolContract.methods.deposit().encodeABI();
-    const tx = {
-      from: account.address,
-      to: wpolContract.options.address,
-      value: weiAmount,
-      gas: 100000,
-      data: data
-    };
-
-    const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Conversion successful with hash: \x1b[33m${receipt.transactionHash}\x1b[0m`);
-  } catch (error) {
-    console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error converting POL to WPOL:`, error);
-  }
-}
-
 async function executeMultipleTransactions(autoRestart = true, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
   const rl = readline.createInterface({
     input: process.stdin,
