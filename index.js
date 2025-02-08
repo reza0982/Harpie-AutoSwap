@@ -66,6 +66,9 @@ async function wrapTokens(account, walletNumber, numTransactions) {
     await approveWPOLIfNeeded(account, walletNumber);
 
     for (let i = 0; i < numTransactions; i++) {
+      if(i == numTransactions) {
+        process.exit()
+      }
       if (!(await isBalanceSufficient(account, amount, walletNumber))) {
         continue;
       }
