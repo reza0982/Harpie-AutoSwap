@@ -1,4 +1,5 @@
 module.exports = {
-  amountToWrap: 0.0001, // Amount WPOL to wrap/convert to tPOL
-  autoRestartDelay: 21600 // Delay time in seconds for auto-restart
-};
+  amountToWrap: 0.0001, // use 0.0001 WPOL to tPOL
+  autoRestartDelay: 10, // delay in seconds before executing another swap
+  repeat: 10 // repeat swap 10 times (default)
+}

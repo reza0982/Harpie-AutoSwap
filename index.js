@@ -6,9 +6,8 @@ const axios = require('axios');
 const contractABI = require('./src/abi');
 const config = require('./config');
 const headers = require('./src/headers');
-const { verifyAccountIdentity, verifyWallet, claimOneTimeReward } = require('./src/walletconnect');
 
-const rpcUrl = 'https://polygon-rpc.com';
+const rpcUrl = "https://rpc-polygon.harpie.io";
 const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 const wpolContract = require('./src/wpol')(web3.currentProvider);
 
@@ -17,56 +16,6 @@ const spenderAddress = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 const amount = web3.utils.toWei(config.amountToWrap.toString(), 'ether');
 
-function displayHeader() {
-  const width = process.stdout.columns;
-  const bannerLines = [
-    "\x1b[34m░▀▀█░█▀█░▀█▀░█▀█\x1b[0m",
-    "\x1b[34m░▄▀░░█▀█░░█░░█░█\x1b[0m",
-    "\x1b[34m░▀▀▀░▀░▀░▀▀▀░▀░▀\x1b[0m",
-    "\x1b[33m╔══════════════════════════════════╗\x1b[0m",
-    "\x1b[33m║                                  ║\x1b[0m",
-    "\x1b[32m║  ZAIN ARAIN                      ║\x1b[0m",
-    "\x1b[32m║  AUTO SCRIPT MASTER              ║\x1b[0m",
-    "\x1b[33m║                                  ║\x1b[0m",
-    "\x1b[36m║  JOIN TELEGRAM CHANNEL NOW!      ║\x1b[0m",
-    "\x1b[36m║  https://t.me/AirdropScript6     ║\x1b[0m",
-    "\x1b[36m║  @AirdropScript6 - OFFICIAL      ║\x1b[0m",
-    "\x1b[36m║  CHANNEL                         ║\x1b[0m",
-    "\x1b[33m║                                  ║\x1b[0m",
-    "\x1b[35m║  FAST - RELIABLE - SECURE        ║\x1b[0m",
-    "\x1b[35m║  SCRIPTS EXPERT                  ║\x1b[0m",
-    "\x1b[33m║                                  ║\x1b[0m",
-    "\x1b[33m╚══════════════════════════════════╝\x1b[0m",
-    "\x1b[36m<|============================================|>\x1b[0m",
-    "\x1b[36m OpenLedger Bot \x1b[0m",
-    "\x1b[36m github.com/zainarain279 \x1b[0m",
-    "\x1b[36m<|============================================|>\x1b[0m"
-  ];
-
-  bannerLines.forEach(line => {
-    console.log(line.padStart((width + line.length) / 2));
-  });
-}
-
-async function claimDailyReward(walletAddress, walletNumber) {
-  const url = `https://api.tea-fi.com/wallet/check-in/current?address=${walletAddress}`;
-  try {
-    const response = await Promise.race([
-      axios.get(url, { headers }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
-    ]);
-
-    if (response.status === 200) {
-      console.log(`\x1b[36m[${walletNumber}]\x1b[0m Claim daily points success!`);
-    }
-  } catch (error) {
-    let errorMessage = error.response ? error.response.data : error.message;
-    if (errorMessage.includes('<title>504 Gateway Time-out</title>')) {
-      errorMessage = '504 Gateway Time-out';
-    }
-    console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error claiming daily reward: ${errorMessage}`);
-  }
-}
 
 async function approveWPOLIfNeeded(account, walletNumber) {
   try {
@@ -140,7 +89,6 @@ async function wrapTokens(account, walletNumber, numTransactions) {
       const gasPrice = await web3.eth.getGasPrice();
       const gasFeeAmount = web3.utils.toBN(gasUsed).mul(web3.utils.toBN(gasPrice)).toString();
 
-      await verifyTransaction(receipt.transactionHash, account.address, gasFeeAmount, walletNumber);
     }
   } catch (error) {
     console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error executing transaction:`, error);
@@ -202,105 +150,22 @@ async function convertPOLToWPOL(account, walletNumber, polAmount) {
   }
 }
 
-async function verifyTransaction(txHash, walletAddress, gasFeeAmount, walletNumber) {
-  const url = 'https://api.tea-fi.com/transaction';
-  const payload = {
-    blockchainId: 137,
-    fromAmount: amount,
-    fromTokenAddress: wpolContract.options.address,
-    fromTokenSymbol: "WPOL",
-    gasFeeAmount: gasFeeAmount,
-    gasFeeTokenAddress: "0x0000000000000000000000000000000000000000",
-    gasFeeTokenSymbol: "POL",
-    hash: txHash,
-    toAmount: amount,
-    toTokenAddress: contractAddress,
-    toTokenSymbol: "tPOL",
-    type: 2,
-    walletAddress: walletAddress
-  };
-
-  try {
-    const response = await axios.post(url, payload, { headers });
-    const statusText = response.status === 201 ? '\x1b[32m(OK)\x1b[0m' : '';
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Verification Status: \x1b[33m${response.status}\x1b[0m ${statusText}, id: \x1b[33m${response.data.id}\x1b[0m, points: \x1b[32m${response.data.pointsAmount}\x1b[0m`);
-  } catch (error) {
-    console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error verifying transaction:`, error.response ? error.response.data : error.message);
-  }
-}
-
-async function displayVerifiedPoints(walletAddress, walletNumber) {
-  const url = `https://api.tea-fi.com/points/${walletAddress}`;
-  try {
-    const response = await Promise.race([
-      axios.get(url, { headers }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
-    ]);
-    console.log(`\x1b[36m[${walletNumber}]\x1b[0m Wallet \x1b[33m${walletAddress}\x1b[0m Verified points (not pending): \x1b[32m${response.data.pointsAmount}\x1b[0m`);
-  } catch (error) {
-    const errorMessage = error.response ? error.response.statusText : error.message;
-    console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error fetching verified points: ${errorMessage}`);
-  }
-}
-
-async function executeMultipleTransactions(autoRestart = false, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
+async function executeMultipleTransactions(autoRestart = true, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  if (!autoRestart) {
-    rl.question('Do you want to auto-restart the process after completion? (y/n): ', async (restartAnswer) => {
-      const autoRestart = restartAnswer.trim().toLowerCase();
-      if (!['y', 'n'].includes(autoRestart)) {
-        console.error('Invalid choice. Please enter "y" or "n".');
-        rl.close();
-        return;
-      }
-
-      await processTransactions(autoRestart === 'y', rl);
-    });
-  } else {
     await processTransactions(true, rl, initialChoice, initialNumTransactions, initialPolAmount);
-  }
 }
 
 async function processTransactions(autoRestart, rl, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
-  let choice = initialChoice;
   let numTransactions = initialNumTransactions;
   let polAmount = initialPolAmount;
 
-  if (!choice) {
-    console.log('1. Convert POL to WPOL');
-    console.log('2. Wrap WPOL to tPOL');
-    console.log('3. Unwrap all tPOL to WPOL');
-    console.log('4. Claim Daily Reward');
-    console.log('5. Execute options 2, 3, and 4 sequentially');
-    choice = await new Promise(resolve => {
-      rl.question('Please select an option (1/2/3/4/5): ', resolve);
-    });
-  }
 
-  if (!['1', '2', '3', '4', '5'].includes(choice)) {
-    console.error('Invalid choice. Please enter "1", "2", "3", "4", or "5".');
-    rl.close();
-    return;
-  }
-
-  if (choice === '1' && !polAmount) {
-    polAmount = await new Promise(resolve => {
-      rl.question('How many POL would you like to convert to WPOL? (Example: 0.01) ', (answer) => {
-        resolve(parseFloat(answer));
-      });
-    });
-  } else if ((choice === '2' || choice === '5') && numTransactions === 1) {
-    numTransactions = await new Promise(resolve => {
-      rl.question('How many transactions would you like to execute per account? ', (answer) => {
-        resolve(parseInt(answer, 10));
-      });
-    });
-  }
-
+    numTransactions = config.repeat;
+  
   const privateKeys = fs.readFileSync(path.join(__dirname, 'priv.txt'), 'utf-8')
     .split('\n')
     .map(key => key.trim())
@@ -318,33 +183,9 @@ async function processTransactions(autoRestart, rl, initialChoice = null, initia
     const account = web3.eth.accounts.privateKeyToAccount(privateKey);
 
     console.log(`\x1b[36m[${walletNumber}]\x1b[0m Processing transactions for account: \x1b[32m${account.address}\x1b[0m`);
-
-    if (!autoRestart || index === 0) {
-      await verifyAccountIdentity(account.address);
-      const referralCode = 'qaikt6';
-      await verifyWallet(account.address, referralCode, walletNumber);
-      await claimOneTimeReward(account.address);
-    }
-
-    if (choice === '1') {
-      await convertPOLToWPOL(account, walletNumber, polAmount);
-    } else if (choice === '2') {
-      await wrapTokens(account, walletNumber, numTransactions);
-    } else if (choice === '3') {
-      console.log(`\x1b[36m[${walletNumber}]\x1b[0m Executing unwrap transaction`);
-      await unwrapTokens(account, walletNumber);
-    } else if (choice === '4') {
-      await claimDailyReward(account.address, walletNumber);
-    } else if (choice === '5') {
-      await wrapTokens(account, walletNumber, numTransactions);
-      await unwrapTokens(account, walletNumber);
-      await claimDailyReward(account.address, walletNumber);
-    }
-
-    await displayVerifiedPoints(account.address, walletNumber);
+        await wrapTokens(account, walletNumber, numTransactions);
   }
 
-  if (autoRestart) {
     const delay = config.autoRestartDelay;
     console.log(`Auto-restarting in ${delay} seconds...`);
     let countdown = delay;
@@ -353,13 +194,9 @@ async function processTransactions(autoRestart, rl, initialChoice = null, initia
       process.stdout.write(`\rAuto-restarting in ${countdown} seconds...`);
       if (countdown <= 0) {
         clearInterval(countdownInterval);
-        executeMultipleTransactions(true, choice, numTransactions, polAmount);
+        executeMultipleTransactions(true, null, numTransactions, polAmount);
       }
     }, 1000);
-  } else {
-    rl.close();
-  }
 }
 
-displayHeader();
 executeMultipleTransactions();
