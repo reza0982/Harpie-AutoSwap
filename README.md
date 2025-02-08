@@ -12,4 +12,4 @@ once your WPOL is empty, you can swap it back to WPOL in tea-fi
 
 
 Donations :
-(Saweria)[https://saweria.co/mininxd]
+[Saweria](https://saweria.co/mininxd)
