@@ -8,21 +8,22 @@ const config = require('./config');
 const headers = require('./src/headers');
 
 const rpcUrl = "https://rpc-polygon.harpie.io";
-const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
-const wpolContract = require('./src/wpol')(web3.currentProvider);
+const web3 = new Web3(new Web3.HTTPProvider(rpcUrl));  // Fixed Web3 Provider
+const wpolABI = require('./src/wpol'); // Assuming wpol.js exports ABI
+const wpolAddress = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
+const wpolContract = new web3.eth.Contract(wpolABI, wpolAddress);  // Fixed WPOL Contract Initialization
 
 const contractAddress = '0x1Cd0cd01c8C902AdAb3430ae04b9ea32CB309CF1';
 const spenderAddress = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 const amount = web3.utils.toWei(config.amountToWrap.toString(), 'ether');
 
-
 async function approveWPOLIfNeeded(account, walletNumber) {
   try {
     const allowance = await wpolContract.methods.allowance(account.address, spenderAddress).call();
     const maxUint256 = '1461501637330902918203684832716283019655932542975';
 
-    if (allowance < amount) {
+    if (web3.utils.toBN(allowance).lt(web3.utils.toBN(amount))) {  // Fixed BN comparison
       console.log(`\x1b[36m[${walletNumber}]\x1b[0m Approving WPOL...`);
       const data = wpolContract.methods.approve(spenderAddress, maxUint256).encodeABI();
       const tx = {
@@ -66,9 +67,6 @@ async function wrapTokens(account, walletNumber, numTransactions) {
     await approveWPOLIfNeeded(account, walletNumber);
 
     for (let i = 0; i < numTransactions; i++) {
-      if(i == numTransactions) {
-        await process.exit()
-      }
       if (!(await isBalanceSufficient(account, amount, walletNumber))) {
         continue;
       }
@@ -91,7 +89,6 @@ async function wrapTokens(account, walletNumber, numTransactions) {
       const gasUsed = receipt.gasUsed;
       const gasPrice = await web3.eth.getGasPrice();
       const gasFeeAmount = web3.utils.toBN(gasUsed).mul(web3.utils.toBN(gasPrice)).toString();
-
     }
   } catch (error) {
     console.error(`\x1b[36m[${walletNumber}]\x1b[0m Error executing transaction:`, error);
@@ -104,16 +101,15 @@ async function executeMultipleTransactions(initialChoice = null, initialNumTrans
     output: process.stdout
   });
 
-    await processTransactions(true, rl, initialChoice, initialNumTransactions, initialPolAmount);
+  await processTransactions(rl, initialChoice, initialNumTransactions, initialPolAmount);
 }
 
-async function processTransactions( rl, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
+async function processTransactions(rl, initialChoice = null, initialNumTransactions = 1, initialPolAmount = 0) {
   let numTransactions = initialNumTransactions;
   let polAmount = initialPolAmount;
 
+  numTransactions = config.repeat;
 
-    numTransactions = config.repeat;
-  
   const privateKeys = fs.readFileSync(path.join(__dirname, 'priv.txt'), 'utf-8')
     .split('\n')
     .map(key => key.trim())
@@ -131,7 +127,7 @@ async function processTransactions( rl, initialChoice = null, initialNumTransact
     const account = web3.eth.accounts.privateKeyToAccount(privateKey);
 
     console.log(`\x1b[36m[${walletNumber}]\x1b[0m Processing transactions for account: \x1b[32m${account.address}\x1b[0m`);
-        await wrapTokens(account, walletNumber, numTransactions);
+    await wrapTokens(account, walletNumber, numTransactions);
   }
 }
 
